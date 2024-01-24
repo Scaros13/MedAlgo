@@ -13,9 +13,9 @@ using System.Linq;
 
 namespace MedAlgo
 {
-    public static class Function1
+    public static class CriticalEpisodesCalulation
     {
-        [FunctionName("ArythmiaTypes")]
+        [FunctionName("CriticalEpisodesCalulation")]
         public static async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Function, "post", Route = null)] HttpRequest req,
             ILogger log)
