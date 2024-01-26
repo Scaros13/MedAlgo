@@ -10,10 +10,9 @@ using System.Collections.Generic;
 using MedAlgo.DTOs;
 using System.Linq;
 
-
 namespace MedAlgo
 {
-    public static class CriticalEpisodesCalulation
+    public static class CriticalEpisodesCalculation
     {
         [FunctionName("CriticalEpisodesCalulation")]
         public static async Task<IActionResult> Run(
@@ -22,58 +21,52 @@ namespace MedAlgo
         {
             const ulong samplesPerMinute = 18000;
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            List<AnnotationModel> annotationList = JsonConvert.DeserializeObject<List<AnnotationModel>>(requestBody);
+            var annotationList = JsonConvert.DeserializeObject<List<AnnotationModel>>(requestBody);
 
             var beats = CalculateBeats(samplesPerMinute, annotationList);
-            var indexedList = annotationList.Select((item, index) => new IndexedAnnotationModel(item, index + 1)).ToList();
+            var groupedEpisodes = GroupEpisodesByArrhythmiaType(beats);
+            var resultList = new List<ResultModel>();
 
-            List<List<IndexedAnnotationModel>> groupedEpisodes = GrupEpisodesByArythmiaType(indexedList);
-            List<ResultModel> resultList = new List<ResultModel>();
-            
             foreach (var episode in groupedEpisodes)
             {
                 var firstItem = episode.First();
                 var lastItem = episode.Last();
-                ArrhythmiaType arrhythmiaType = ArrhythmiaType.Normal;
-                bool isFirstIteration = true;
+                var arrhythmiaType = firstItem.Annotation.ArrhythmiaType; 
+                var averageHR = episode.Average(item => (double)item.Hr);
 
-                foreach (var item in episode)
+                if (IsCriticalEpisode(averageHR, arrhythmiaType, episode.Count))
                 {
-                  arrhythmiaType = item.AnnotationModel.ArrhythmiaType;
-                  break;
-                }
-
-                double averageIndexInSamples = episode.Average(item => (double)item.AnnotationModel.IndexInSamples);
-                
-                if (isCriticalEpisode(averageIndexInSamples, arrhythmiaType, episode.Count))
-                {
-                    var result = new ResultModel();
-                    result.StartIndexInSample = firstItem.AnnotationModel.IndexInSamples;
-                    result.EndIndexInSample = lastItem.AnnotationModel.IndexInSamples;
+                    var result = new ResultModel
+                    {
+                        StartIndexInSample = firstItem.Annotation.IndexInSamples,
+                        EndIndexInSample = lastItem.Annotation.IndexInSamples
+                    };
                     resultList.Add(result);
                 }
             }
+
             return new OkObjectResult(resultList);
         }
 
-        private static List<List<IndexedAnnotationModel>> GrupEpisodesByArythmiaType(List<IndexedAnnotationModel> indexedList)
+        internal static List<List<Beat>> GroupEpisodesByArrhythmiaType(List<Beat> beats)
         {
-            var groupedEpisodes = new List<List<IndexedAnnotationModel>>();
-            var currentEpisode = new List<IndexedAnnotationModel>();
+            var groupedEpisodes = new List<List<Beat>>();
+            var currentEpisode = new List<Beat>();
 
-            foreach (var annotation in indexedList)
+            foreach (var beat in beats)
             {
-                if (!currentEpisode.Any() || currentEpisode.Last().AnnotationModel.ArrhythmiaType == annotation.AnnotationModel.ArrhythmiaType)
+                if (!currentEpisode.Any() || currentEpisode.Last().Annotation.ArrhythmiaType == beat.Annotation.ArrhythmiaType)
                 {
-                    currentEpisode.Add(annotation);
+                    currentEpisode.Add(beat);
                 }
                 else
                 {
                     groupedEpisodes.Add(currentEpisode.ToList());
                     currentEpisode.Clear();
-                    currentEpisode.Add(annotation);
+                    currentEpisode.Add(beat);
                 }
             }
+
             if (currentEpisode.Any())
             {
                 groupedEpisodes.Add(currentEpisode.ToList());
@@ -81,32 +74,41 @@ namespace MedAlgo
 
             return groupedEpisodes;
         }
-        private static bool isCriticalEpisode(double averageIndex, ArrhythmiaType arrhythmiaType, int beatCount)
+
+        internal static bool IsCriticalEpisode(double averageHr, ArrhythmiaType arrhythmiaType, int beatCount)
         {
-
-            if (arrhythmiaType == ArrhythmiaType.AST)
-                return true;
-
-            if (arrhythmiaType == ArrhythmiaType.AF && averageIndex >= 200 && beatCount >= 10)
-                return true;
-
-            if (arrhythmiaType == ArrhythmiaType.VT && averageIndex >= 100 && beatCount >= 5)
-                return true;
-
-            if (arrhythmiaType == ArrhythmiaType.SVT && averageIndex >= 200 && beatCount >= 5)
-                return true;
-
-            return false;
+            switch (arrhythmiaType)
+            {
+                case ArrhythmiaType.AST:
+                case ArrhythmiaType.AF when averageHr >= 200 && beatCount >= 10:
+                case ArrhythmiaType.VT when averageHr >= 100 && beatCount >= 5:
+                case ArrhythmiaType.SVT when averageHr >= 200 && beatCount >= 5:
+                    return true;
+                default:
+                    return false;
+            }
         }
-        private static List<ulong> CalculateBeats(ulong samplesPerMinute, List<AnnotationModel> annotationList)
+
+        internal static List<Beat> CalculateBeats(ulong samplesPerMinute, List<AnnotationModel> annotationList)
         {
-            List<ulong> beats = new List<ulong>(annotationList.Count);
+            var beats = new List<Beat>(annotationList.Count);
             for (int i = 1; i < annotationList.Count; i++)
             {
-                var beat = samplesPerMinute / (annotationList[i].IndexInSamples - annotationList[i - 1].IndexInSamples);
+                var beat = new Beat
+                {
+                    Annotation = annotationList[i],
+                    Hr = samplesPerMinute / (annotationList[i].IndexInSamples - annotationList[i - 1].IndexInSamples)
+                };
                 beats.Add(beat);
             }
+
             return beats;
+        }
+
+        internal class Beat
+        {
+            public AnnotationModel Annotation { get; init; }
+            public ulong Hr { get; init; }
         }
     }
 }
