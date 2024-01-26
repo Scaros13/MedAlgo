@@ -1,0 +1,22 @@
+[
+    { "IndexInSamples": 300, "ArrhythmiaType": 0 },
+    { "IndexInSamples": 600, "ArrhythmiaType": 0 },
+    { "IndexInSamples": 900, "ArrhythmiaType": 0 },
+    { "IndexInSamples": 2000, "ArrhythmiaType": 2 },
+    { "IndexInSamples": 2100, "ArrhythmiaType": 2 },
+    { "IndexInSamples": 3300, "ArrhythmiaType": 2 },
+    { "IndexInSamples": 3600, "ArrhythmiaType": 0 },
+    { "IndexInSamples": 3900, "ArrhythmiaType": 0 },
+    { "IndexInSamples": 4200, "ArrhythmiaType": 1 },
+    { "IndexInSamples": 4360, "ArrhythmiaType": 1 },
+    { "IndexInSamples": 4520, "ArrhythmiaType": 1 },
+    { "IndexInSamples": 4900, "ArrhythmiaType": 0 },
+    { "IndexInSamples": 5200, "ArrhythmiaType": 0 },
+    { "IndexInSamples": 5500, "ArrhythmiaType": 0 },
+    { "IndexInSamples": 5660, "ArrhythmiaType": 1 },
+    { "IndexInSamples": 5820, "ArrhythmiaType": 1 },
+    { "IndexInSamples": 5980, "ArrhythmiaType": 1 },
+    { "IndexInSamples": 6140, "ArrhythmiaType": 1 },
+    { "IndexInSamples": 6300, "ArrhythmiaType": 1 },
+    { "IndexInSamples": 6460, "ArrhythmiaType": 0 }
+]
